@@ -4,8 +4,8 @@ import ray
 from ray import serve
 from scorer import Scorer
 
-# Start Ray
-ray.init(num_cpus=0.5)
+# Start Ray without fractional CPUs
+ray.init()
 
 # Input schema
 class ScoreRequest(BaseModel):
@@ -21,11 +21,19 @@ async def score_endpoint(request: Request):
     score = Scorer().score(features)
     return {"score": score}
 
-# Wrap FastAPI app in a Ray Serve deployment
+# Ray Serve deployment wrapping FastAPI app
 @serve.deployment(ray_actor_options={"num_cpus": 0.25})
 @serve.ingress(app)
 class ScoreService:
-    pass  # Ray Serve just serves the FastAPI app
+    def __init__(self):
+        self.scorer = Scorer()
 
-# Deploy
+    @app.post("/score")
+    async def score_endpoint(self, request: Request):
+        body = await request.json()
+        features = body["features"]
+        score = self.scorer.score(features)
+        return {"score": score}
+
+# Run Serve application
 serve.run(ScoreService.bind(), name="score_app", route_prefix="/", blocking=True)
