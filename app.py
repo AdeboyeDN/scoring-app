@@ -5,7 +5,7 @@ from ray import serve
 from scorer import Scorer
 
 # Start Ray
-ray.init()
+ray.init(num_cpus=0.5)
 
 # Input schema
 class ScoreRequest(BaseModel):
@@ -22,7 +22,7 @@ async def score_endpoint(request: Request):
     return {"score": score}
 
 # Wrap FastAPI app in a Ray Serve deployment
-@serve.deployment
+@serve.deployment(ray_actor_options={"num_cpus": 0.25})
 @serve.ingress(app)
 class ScoreService:
     pass  # Ray Serve just serves the FastAPI app
