@@ -28,4 +28,4 @@ class ScoreService:
     pass  # Ray Serve just serves the FastAPI app
 
 # Deploy
-serve.run(ScoreService.bind())
+serve.run(ScoreService.bind(), name="score_app", route_prefix="/", blocking=True)
