@@ -4,8 +4,11 @@ import ray
 from ray import serve
 from scorer import Scorer
 
-# Start Ray without fractional CPUs
+# Start Ray
 ray.init()
+
+# Start Ray Serve with public host
+serve.start(detached=True, http_options={"host": "0.0.0.0", "port": 8000})
 
 # Input schema
 class ScoreRequest(BaseModel):
@@ -14,15 +17,12 @@ class ScoreRequest(BaseModel):
 # FastAPI app
 app = FastAPI()
 
-@app.post("/score")
-async def score_endpoint(request: Request):
-    body = await request.json()
-    features = body["features"]
-    score = Scorer().score(features)
-    return {"score": score}
+@app.get("/")  # Optional health check
+async def root():
+    return {"status": "ok"}
 
 # Ray Serve deployment wrapping FastAPI app
-@serve.deployment(ray_actor_options={"num_cpus": 0.25})
+@serve.deployment(ray_actor_options={"num_cpus": 0})
 @serve.ingress(app)
 class ScoreService:
     def __init__(self):
@@ -35,5 +35,5 @@ class ScoreService:
         score = self.scorer.score(features)
         return {"score": score}
 
-# Run Serve application
+# Deploy the app
 serve.run(ScoreService.bind(), name="score_app", route_prefix="/", blocking=True)
